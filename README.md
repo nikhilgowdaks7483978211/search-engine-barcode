@@ -1,54 +1,58 @@
-# Barcode Intelligence (India)
+# Barcode Intelligence India
 
-Search a barcode or product name and get the product identity, ingredients and nutrition (food), GST 2.0 and HSN guidance, images with downloads, Indian shop listings and a full source list. Every field shows where it came from. Missing data shows "Information not available". Unclear GST/HSN shows "Requires verification". Nothing is invented and there is no stored product dataset.
+A mobile-friendly barcode and product-name lookup web application. It uses the public Open Food Facts database for product records.
 
-```
-backend/      FastAPI API, providers, GST table, tests
-frontend/     React + Vite + TypeScript + Tailwind
-standalone/   index.html: the same idea as one file, no server needed
-Dockerfile    builds frontend and serves it with the API (one URL)
-render.yaml   one-click deploy on Render
-```
+## Features
+- Search by barcode (8–14 digits) or product name.
+- Search using a phone camera barcode scanner (HTTPS required).
+- Display available brand, quantity, image, categories, ingredients, allergens, labels and nutrition facts.
+- Link to the source record and a retailer search page.
+- Responsive dark interface.
+- FastAPI backend with health endpoint and Docker deployment configuration.
 
-## 1. Run on your computer
-```bash
-cp .env.example .env          # fill in keys, see below
-docker compose up --build     # open http://localhost:8000
-```
-Without Docker: `cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload` and, in another terminal, `cd frontend && npm install && npm run dev` (open http://localhost:5173). Tests: `cd backend && pytest`.
+## Important data limitations
+This starter version does **not** have a verified, complete Indian product catalogue. Open Food Facts coverage varies by product and region, and records may be missing or community-contributed. A barcode can be valid even when no record is found.
 
-## 2. Put it on GitHub
-Create an empty repo on github.com (no README), then:
-```bash
-git init && git add . && git commit -m "Barcode Intelligence"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO.git
-git push -u origin main
-```
-`.env` is git-ignored, so your keys are not uploaded.
+Live prices, retailer stock, HSN codes and GST rates are not supplied by the integrated database. The app deliberately labels these as unavailable rather than inventing values. Do not use it for tax classification or safety-critical decisions without checking authoritative sources and the package.
 
-## 3. Get a share link
-**A. Full app with backend (recommended), on Render.** Render dashboard > New > Blueprint > choose your repo. It reads `render.yaml`, builds the Dockerfile and creates a Postgres database. Open the service > Environment and add `GOOGLE_API_KEY` and `GOOGLE_CSE_ID` (or `SERPAPI_KEY`). Your link is `https://<service-name>.onrender.com`. Free instances sleep when idle, so the first visit can take about a minute.
+## Run locally on Windows
 
-**B. Standalone page on GitHub Pages (no server).** Repo Settings > Pages > Source: GitHub Actions, then push to `main`. The page is published at `https://YOUR-USERNAME.github.io/YOUR-REPO/`. Visitors paste their own Google or Anthropic keys in the page (stored in their browser only), because a static page cannot hold a secret.
+1. Install Python 3.10+ from https://www.python.org/downloads/
+2. Extract this ZIP file.
+3. Open the extracted `barcode_intelligence_india` folder.
+4. Click the address bar in File Explorer, type `cmd`, and press Enter.
+5. Run:
 
-Shareable result links look like `<your link>/?q=BARCODE`.
+   ```bat
+   py -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   uvicorn app.main:app --reload
+   ```
 
-## 4. Keys
-| Key | Where to get it | Used for |
-|---|---|---|
-| `GOOGLE_API_KEY` | console.cloud.google.com, enable "Custom Search API" | live Google India search |
-| `GOOGLE_CSE_ID` | programmablesearchengine.google.com, search the entire web, turn on Image search | which sites to search |
-| `SERPAPI_KEY` (optional) | serpapi.com | alternative to Google |
-| `UPCITEMDB_KEY` (optional) | upcitemdb.com | higher UPC lookup limit |
+6. Open Chrome and visit http://127.0.0.1:8000
 
-Open Food Facts and UPCitemdb (trial) need no key. Without a Google or SerpAPI key, web search, retailer listings and web images are reported as "not configured". Google's free tier is about 100 queries a day and one barcode search uses about 7, so set `RATE_LIMIT_PER_MIN` and `CACHE_TTL_HOURS`.
+If `py` is unavailable, use `python` instead. Camera scanning generally requires HTTPS; manual barcode entry works locally.
 
-## API
-Interactive docs at `/docs`. `POST /api/search/barcode` | `GET /api/products/{id}` | `/api/search/history` | `/api/products/{id}/images` | `/images/{n}/download` | `/images/zip` | `/export?format=json|csv` | `/api/health`.
+## Deploy publicly with Render
 
-## GST and HSN
-CBIC and the GST Portal have no public rate API. `backend/app/gst.py` holds a small curated table for GST 2.0 (effective 22 Sep 2025) and labels matches "indicative". Anything else is "requires verification". Extend the table from the official notifications for your catalogue and verify before invoicing.
+1. Create a GitHub repository named `search-engine-barcode` (or use your existing repository).
+2. Extract this ZIP.
+3. Upload the **contents** of the extracted folder to the root of your GitHub repository. The `app`, `static`, `Dockerfile`, `render.yaml`, and `requirements.txt` files must be at the repository root.
+4. Commit the files to the `main` branch.
+5. Sign in to https://render.com
+6. Choose **New + → Blueprint** and connect your GitHub repository.
+7. Render detects `render.yaml`. Review and create the web service.
+8. When deployment completes, open the `onrender.com` URL shown in the Render dashboard.
 
-## Not included yet
-Alembic migrations (tables are auto-created), server-side PDF export (use Print > Save as PDF), manufacturer-site scraping for specifications, GS1 verification (needs a paid account), accounts. The in-memory rate limiter is per process; use Redis if you run several workers. Check image usage rights before reuse.
+The free hosting plan and free database/API coverage can change. The service may sleep when idle and take a little time to wake up.
+
+## API endpoints
+- `GET /api/health`
+- `GET /api/barcode/{code}`
+- `GET /api/search?q={product name}`
+- `GET /api/retailer-search/{code}`
+
+## Data source
+Open Food Facts: https://world.openfoodfacts.org/
+API documentation: https://openfoodfacts.github.io/openfoodfacts-server/api/
